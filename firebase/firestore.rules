@@ -1,0 +1,771 @@
+rules_version = '2';
+
+service cloud.firestore {
+
+  match /databases/{database}/documents {
+
+
+    /* =====================================================
+       AUTENTICACIÓN
+       ===================================================== */
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+
+    function owner(uid) {
+      return signedIn()
+        && request.auth.uid == uid;
+    }
+
+
+    /* =====================================================
+       ADMINISTRADORES
+       ===================================================== */
+
+    /*
+      Para convertir una cuenta en administrador
+      NO vamos a permitir hacerlo desde el navegador.
+
+      Más adelante crearás manualmente:
+
+      /admins/TU_UID
+
+      desde Firebase Console.
+
+      La existencia de ese documento será lo que
+      realmente conceda acceso administrativo.
+    */
+
+    function isAdmin() {
+      return signedIn()
+        && exists(
+          /databases/$(database)/documents/admins/$(request.auth.uid)
+        );
+    }
+
+
+    /* =====================================================
+       ESTADO DE CUENTA
+       ===================================================== */
+
+    /*
+      Cada usuario que utilice WorkLog deberá tener:
+
+      /userAccess/{uid}
+
+      access.js se encargará de crear este documento
+      automáticamente para las cuentas existentes
+      cuando entren por primera vez.
+
+      Campos usados:
+
+      active
+      disabledForever
+      blockedUntil
+      email
+      displayName
+      role
+      adminNote
+      createdAt
+      updatedAt
+    */
+
+    function accountEnabled(uid) {
+
+      let access =
+        get(
+          /databases/$(database)/documents/userAccess/$(uid)
+        ).data;
+
+      /*
+        Ya no permitimos acceso a /users/{uid}
+        si userAccess/{uid} no existe.
+
+        Esto es intencional.
+
+        access.js crea primero el registro de acceso
+        y después WorkLog carga los datos privados.
+
+        Si el documento no existe, esta comprobación
+        falla y los datos privados permanecen cerrados.
+      */
+
+      return access.active == true
+
+        && access.disabledForever == false
+
+        && (
+          !('blockedUntil' in access)
+          || access.blockedUntil <= request.time
+        );
+    }
+
+
+    function ownerEnabled(uid) {
+      return owner(uid)
+        && accountEnabled(uid);
+    }
+
+
+    /* =====================================================
+       VALIDACIÓN DEL DOCUMENTO userAccess
+       ===================================================== */
+
+    function validAccessDocument() {
+
+      let d = request.resource.data;
+
+      return d.keys().hasOnly([
+          'email',
+          'displayName',
+          'active',
+          'disabledForever',
+          'blockedUntil',
+          'role',
+          'adminNote',
+          'createdAt',
+          'updatedAt'
+        ])
+
+        && (
+          !('email' in d)
+          || (
+            d.email is string
+            && d.email.size() <= 254
+          )
+        )
+
+        && (
+          !('displayName' in d)
+          || (
+            d.displayName is string
+            && d.displayName.size() <= 80
+          )
+        )
+
+        && (
+          !('active' in d)
+          || d.active is bool
+        )
+
+        && (
+          !('disabledForever' in d)
+          || d.disabledForever is bool
+        )
+
+        && (
+          !('blockedUntil' in d)
+          || d.blockedUntil is timestamp
+        )
+
+        && (
+          !('role' in d)
+          || (
+            d.role is string
+            && (
+              d.role == 'user'
+              || d.role == 'admin'
+            )
+          )
+        )
+
+        && (
+          !('adminNote' in d)
+          || (
+            d.adminNote is string
+            && d.adminNote.size() <= 500
+          )
+        )
+
+        && (
+          !('createdAt' in d)
+          || d.createdAt is timestamp
+        )
+
+        && (
+          !('updatedAt' in d)
+          || d.updatedAt is timestamp
+        );
+    }
+
+
+    /* =====================================================
+       CREACIÓN SEGURA DEL PERFIL DE ACCESO POR EL USUARIO
+       ===================================================== */
+
+    function validSelfAccessCreate(uid) {
+
+      let d = request.resource.data;
+
+      return owner(uid)
+
+        && validAccessDocument()
+
+        /*
+          Estos campos deben existir porque access.js
+          los crea siempre.
+        */
+
+        && d.keys().hasAll([
+          'email',
+          'displayName',
+          'active',
+          'disabledForever',
+          'role',
+          'createdAt',
+          'updatedAt'
+        ])
+
+        /*
+          Un usuario normal solamente puede
+          crearse inicialmente como activo.
+        */
+
+        && d.active == true
+
+        && d.disabledForever == false
+
+        /*
+          Nunca puede crear por sí mismo
+          una suspensión.
+        */
+
+        && !('blockedUntil' in d)
+
+        /*
+          Nunca puede escribir notas
+          administrativas sobre sí mismo.
+        */
+
+        && !('adminNote' in d)
+
+        /*
+          Nunca puede autoconvertirse
+          en administrador.
+        */
+
+        && d.role == 'user'
+
+        /*
+          El correo debe corresponder
+          al usuario autenticado.
+        */
+
+        && d.email == request.auth.token.email;
+    }
+
+
+    /* =====================================================
+       ACTUALIZACIÓN DEL PERFIL POR EL PROPIO USUARIO
+       ===================================================== */
+
+    function validSelfAccessUpdate(uid) {
+
+      let affected =
+        request.resource.data
+          .diff(resource.data)
+          .affectedKeys();
+
+      return owner(uid)
+
+        && validAccessDocument()
+
+        /*
+          El propio usuario solamente puede actualizar:
+
+          email
+          displayName
+          updatedAt
+
+          No puede tocar:
+
+          active
+          disabledForever
+          blockedUntil
+          role
+          adminNote
+          createdAt
+        */
+
+        && affected.hasOnly([
+          'email',
+          'displayName',
+          'updatedAt'
+        ])
+
+        && (
+          !('email' in request.resource.data)
+          || request.resource.data.email
+            == request.auth.token.email
+        );
+    }
+
+
+    /* =====================================================
+       ELIMINACIÓN SEGURA DEL PERFIL DE ACCESO
+       ===================================================== */
+
+    /*
+      Esta validación se usa únicamente cuando
+      el propio usuario elimina voluntariamente
+      su cuenta de WorkLog.
+
+      Un usuario bloqueado o suspendido NO puede
+      borrar userAccess/{uid} para saltarse el
+      control administrativo.
+    */
+
+    function validSelfAccessDelete(uid) {
+
+      return owner(uid)
+
+        && resource.data.active == true
+
+        && resource.data.disabledForever == false
+
+        && (
+          !('blockedUntil' in resource.data)
+          || resource.data.blockedUntil <= request.time
+        );
+    }
+
+
+    /* =====================================================
+       CONFIGURACIÓN PRINCIPAL
+       ===================================================== */
+
+    function validConfig() {
+
+      let d = request.resource.data;
+
+      return d.keys().hasOnly([
+          'sv',
+          'p',
+          't',
+          'c',
+          'q',
+          'n',
+          'm',
+          'u'
+        ])
+
+        && d.sv is int
+
+        && d.sv == 5
+
+        && d.p is map
+        && d.p.size() <= 1200
+
+        && d.t is map
+        && d.t.size() <= 500
+
+        && d.c is map
+        && d.c.size() <= 500
+
+        && d.q is map
+        && d.q.size() <= 500
+
+        && d.n is list
+        && d.n.size() <= 50
+
+        && d.m is list
+        && d.m.size() <= 600
+
+        && (
+          !('u' in d)
+          || d.u is timestamp
+        );
+    }
+
+
+    /* =====================================================
+       VALIDAR ID DE MES
+       ===================================================== */
+
+    function validMonthId(monthId) {
+
+      return monthId.matches(
+        '^[0-9]{4}-(0[1-9]|1[0-2])$'
+      );
+    }
+
+
+    /* =====================================================
+       DOCUMENTO DEL MES
+       ===================================================== */
+
+    function validMonth() {
+
+      let d = request.resource.data;
+
+      return d.keys().hasOnly([
+          'sv',
+          'mode',
+          'a',
+          'parts',
+          'u'
+        ])
+
+        && d.sv is int
+
+        && d.sv == 5
+
+        && d.mode is string
+
+        && (
+          d.mode == 'single'
+          || d.mode == 'sharded'
+        )
+
+        && (
+          !('a' in d)
+          || (
+            d.a is map
+            && d.a.size() <= 500
+          )
+        )
+
+        && (
+          !('parts' in d)
+          || (
+            d.parts is list
+            && d.parts.size() <= 100
+          )
+        )
+
+        && (
+          !('u' in d)
+          || d.u is timestamp
+        )
+
+        /* -----------------------------------------------
+           Modo single
+           ----------------------------------------------- */
+
+        && (
+          d.mode != 'single'
+
+          ||
+
+          (
+            ('a' in d)
+            && d.a is map
+          )
+        )
+
+        /* -----------------------------------------------
+           Modo sharded
+           ----------------------------------------------- */
+
+        && (
+          d.mode != 'sharded'
+
+          ||
+
+          (
+            ('parts' in d)
+            && d.parts is list
+          )
+        );
+    }
+
+
+    /* =====================================================
+       PARTES DE MESES
+       ===================================================== */
+
+    function validPartId(partId) {
+
+      return partId.matches(
+        '^p[0-9]+$'
+      );
+    }
+
+
+    function validPart() {
+
+      let d = request.resource.data;
+
+      return d.keys().hasOnly([
+          'sv',
+          'a',
+          'u'
+        ])
+
+        && d.sv is int
+
+        && d.sv == 5
+
+        && d.a is map
+
+        && d.a.size() <= 300
+
+        && (
+          !('u' in d)
+          || d.u is timestamp
+        );
+    }
+
+
+    /* =====================================================
+       ADMIN DOCUMENTS
+       ===================================================== */
+
+    match /admins/{adminId} {
+
+      /*
+        Un administrador puede comprobar
+        su propio documento.
+
+        Esto es necesario para que:
+
+        /admin
+
+        confirme si la cuenta autenticada
+        es realmente administradora.
+      */
+
+      allow get:
+        if signedIn()
+        && request.auth.uid == adminId;
+
+
+      /*
+        No permitimos enumerar la lista
+        completa de administradores.
+      */
+
+      allow list:
+        if false;
+
+
+      /*
+        Nadie puede otorgarse permisos
+        administrativos desde JavaScript.
+
+        Los administradores se crean
+        manualmente desde Firebase Console.
+      */
+
+      allow create, update, delete:
+        if false;
+    }
+
+
+    /* =====================================================
+       ESTADOS DE CUENTA
+       ===================================================== */
+
+    match /userAccess/{uid} {
+
+      /*
+        El usuario siempre puede leer SU propio
+        estado, incluso si está bloqueado.
+
+        Esto permite que access.js pueda mostrar:
+
+        "Cuenta suspendida hasta..."
+        "Cuenta bloqueada..."
+      */
+
+      allow get:
+        if owner(uid)
+        || isAdmin();
+
+
+      /*
+        Solamente los administradores pueden
+        obtener la lista completa de usuarios
+        desde /admin.
+      */
+
+      allow list:
+        if isAdmin();
+
+
+      /*
+        Un usuario normal puede crear solamente
+        su ficha inicial segura.
+
+        El administrador también puede crear
+        una ficha cuando crea una nueva cuenta.
+      */
+
+      allow create:
+        if validSelfAccessCreate(uid)
+
+        || (
+          isAdmin()
+          && validAccessDocument()
+        );
+
+
+      /*
+        Usuario normal:
+
+        solamente puede actualizar:
+        - correo
+        - nombre
+        - updatedAt
+
+        Administrador:
+
+        puede modificar:
+        - active
+        - disabledForever
+        - blockedUntil
+        - role
+        - adminNote
+        - datos básicos
+      */
+
+      allow update:
+        if validSelfAccessUpdate(uid)
+
+        || (
+          isAdmin()
+          && validAccessDocument()
+        );
+
+
+      /*
+        Un administrador NO elimina userAccess.
+
+        Para bloquear o reactivar una cuenta
+        se modifican:
+
+        active
+        disabledForever
+        blockedUntil
+
+        El propio usuario sí puede eliminar su
+        userAccess únicamente durante la
+        eliminación voluntaria de su cuenta.
+
+        Si está bloqueado o suspendido,
+        esta eliminación será rechazada.
+      */
+
+      allow delete:
+        if validSelfAccessDelete(uid);
+    }
+
+
+    /* =====================================================
+       CONFIGURACIÓN PRIVADA DEL USUARIO
+       ===================================================== */
+
+    match /users/{uid}/config/{configId} {
+
+      allow get:
+        if ownerEnabled(uid)
+        && configId == 'main';
+
+
+      /*
+        WorkLog conoce exactamente config/main,
+        por lo que no necesita listar documentos
+        dentro de esta colección.
+      */
+
+      allow list:
+        if false;
+
+
+      allow create, update:
+        if ownerEnabled(uid)
+        && configId == 'main'
+        && validConfig();
+
+
+      allow delete:
+        if ownerEnabled(uid)
+        && configId == 'main';
+    }
+
+
+    /* =====================================================
+       MESES
+       ===================================================== */
+
+    match /users/{uid}/months/{monthId} {
+
+      allow get:
+        if ownerEnabled(uid)
+        && validMonthId(monthId);
+
+
+      /*
+        Los meses se conocen por ID y por el índice
+        guardado en config/main.
+
+        No necesitamos permitir consultas generales
+        a toda la colección.
+      */
+
+      allow list:
+        if false;
+
+
+      allow create, update:
+        if ownerEnabled(uid)
+        && validMonthId(monthId)
+        && validMonth();
+
+
+      allow delete:
+        if ownerEnabled(uid)
+        && validMonthId(monthId);
+
+
+      /* ===================================================
+         PARTES DEL MES
+         =================================================== */
+
+      match /parts/{partId} {
+
+        allow get:
+          if ownerEnabled(uid)
+          && validMonthId(monthId)
+          && validPartId(partId);
+
+
+        /*
+          data.js conoce los IDs p1, p2, p3...
+          desde el documento principal del mes.
+
+          No necesita listar toda la colección.
+        */
+
+        allow list:
+          if false;
+
+
+        allow create, update:
+          if ownerEnabled(uid)
+          && validMonthId(monthId)
+          && validPartId(partId)
+          && validPart();
+
+
+        allow delete:
+          if ownerEnabled(uid)
+          && validMonthId(monthId)
+          && validPartId(partId);
+      }
+    }
+
+
+    /* =====================================================
+       TODO LO DEMÁS DENEGADO
+       ===================================================== */
+
+    match /{document=**} {
+
+      allow read, write:
+        if false;
+    }
+  }
+}
