@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0e14">
+  <meta name="description" content="WorkLog Premium: registro privado de actividades, lugares frecuentes, agenda e historial.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon-192.png" sizes="192x192">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <link rel="stylesheet" href="./css/styles.css">
+  <title>WorkLog Premium</title>
+</head>
+<body>
+  <div id="bootScreen" class="boot-screen">
+    <div class="boot-logo">W</div>
+    <div class="spinner"></div>
+    <p>Preparando WorkLog...</p>
+  </div>
+
+  <div id="offlineBanner" class="offline-banner hidden">
+    <span>⚠ Sin conexión. Puedes seguir trabajando; los cambios se sincronizarán cuando vuelva Internet.</span>
+  </div>
+
+  <section id="authScreen" class="auth-screen hidden">
+    <aside class="auth-visual">
+      <div class="auth-orb orb-a"></div>
+      <div class="auth-orb orb-b"></div>
+      <div class="brand auth-brand"><div class="brand-mark">W</div><span>WorkLog</span></div>
+      <div class="auth-copy">
+        <span class="eyebrow">REGISTRO DE TRABAJO</span>
+        <h1>Tu jornada organizada, rápida y privada.</h1>
+        <p>Guarda lugares una sola vez, registra actividades en segundos y trabaja incluso con conexión inestable.</p>
+      </div>
+      <div class="auth-feature-grid">
+        <div><strong>⚡ Local-first</strong><span>La interfaz responde al instante.</span></div>
+        <div><strong>☁ Ligero</strong><span>Firestore solo sincroniza lo necesario.</span></div>
+        <div><strong>🔐 Privado</strong><span>Cada cuenta accede solo a sus datos.</span></div>
+      </div>
+    </aside>
+
+    <main class="auth-panel">
+      <div class="auth-card">
+        <div class="mobile-brand brand"><div class="brand-mark">W</div><span>WorkLog</span></div>
+        <h2 id="authTitle">Bienvenido</h2>
+        <p id="authSubtitle" class="muted">Ingresa a tu cuenta para continuar.</p>
+
+        <div class="auth-tabs">
+          <button type="button" class="auth-tab active" data-auth-mode="login">Iniciar sesión</button>
+          <button type="button" class="auth-tab" data-auth-mode="register">Crear cuenta</button>
+        </div>
+
+        <div id="authMessage" class="message hidden"></div>
+
+        <form id="authForm">
+          <div class="field">
+            <label for="authEmail">Correo electrónico</label>
+            <input id="authEmail" class="control" type="email" autocomplete="email" required placeholder="correo@ejemplo.com">
+          </div>
+          <div class="field">
+            <label for="authPassword">Contraseña</label>
+            <input id="authPassword" class="control" type="password" autocomplete="current-password" minlength="6" required placeholder="Mínimo 6 caracteres">
+          </div>
+          <div id="confirmPasswordField" class="field hidden">
+            <label for="authConfirm">Confirmar contraseña</label>
+            <input id="authConfirm" class="control" type="password" minlength="6" placeholder="Repite la contraseña">
+          </div>
+          <label class="check-row auth-trust">
+            <input id="trustedDeviceLogin" type="checkbox" checked>
+            <span><strong>Confiar en este dispositivo</strong><small>Permite caché persistente para abrir más rápido y trabajar sin conexión. Cambiar esta opción recarga la página antes de iniciar sesión.</small></span>
+          </label>
+          <div class="auth-options">
+            <button id="forgotPasswordBtn" type="button" class="text-button">¿Olvidaste tu contraseña?</button>
+          </div>
+          <button id="authSubmit" class="button button-primary button-block" type="submit">Entrar</button>
+        </form>
+        <p class="micro-note">No se usa Firebase Storage, Analytics ni archivos multimedia.</p>
+      </div>
+    </main>
+  </section>
+
+  <section id="appScreen" class="app-shell hidden">
+    <div id="sidebarOverlay" class="sidebar-overlay hidden"></div>
+    <aside id="sidebar" class="sidebar">
+      <div class="brand sidebar-brand"><div class="brand-mark">W</div><span>WorkLog</span><span class="version-pill">V2</span></div>
+      <nav class="nav">
+        <button class="nav-button active" data-page="dashboard"><span>⌂</span><span>Inicio</span></button>
+        <button class="nav-button" data-page="agenda"><span>✓</span><span>Jornada</span></button>
+        <button class="nav-button" data-page="places"><span>⌖</span><span>Lugares</span></button>
+        <button class="nav-button" data-page="history"><span>≡</span><span>Historial</span></button>
+        <button class="nav-button" data-page="calendar"><span>▦</span><span>Calendario</span></button>
+        <button class="nav-button" data-page="reports"><span>▥</span><span>Reportes</span></button>
+        <button class="nav-button" data-page="settings"><span>⚙</span><span>Ajustes</span></button>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="account-mini">
+          <div id="userAvatar" class="avatar">U</div>
+          <div class="account-mini-text"><strong id="userName">Usuario</strong><span id="userEmail">correo</span></div>
+        </div>
+        <button id="logoutBtn" class="button button-ghost button-block">Cerrar sesión</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="top-title-group">
+          <button id="menuBtn" class="icon-button mobile-only" aria-label="Abrir menú">☰</button>
+          <div><h1 id="pageTitle">Inicio</h1><p id="todayText"></p></div>
+        </div>
+        <div class="top-actions">
+          <button id="syncButton" class="sync-chip" type="button" title="Sincronizar ahora"><span id="syncDot" class="sync-dot"></span><span id="syncText">Guardado</span><span>↻</span></button>
+          <button id="themeQuickBtn" class="icon-button" type="button" title="Cambiar tema">☀</button>
+          <button id="globalSearchBtn" class="icon-button desktop-only" type="button" title="Buscar">⌕</button>
+          <button class="button button-primary desktop-only" data-open-activity>＋ Registrar</button>
+        </div>
+      </header>
+
+      <section id="page-dashboard" class="page active">
+        <article class="hero-card">
+          <div>
+            <span class="eyebrow">HOY</span>
+            <h2 id="welcomeTitle">Bienvenido 👋</h2>
+            <p>Registra lo habitual en pocos toques. Los cambios aparecen de inmediato y se sincronizan después.</p>
+            <div class="hero-actions">
+              <button class="button button-primary" data-open-activity>＋ Nueva actividad</button>
+              <button id="repeatLastBtn" class="button button-ghost">↻ Repetir última</button>
+            </div>
+          </div>
+          <div class="hero-watermark">W</div>
+        </article>
+
+        <div class="stats-grid">
+          <article class="stat-card"><div class="stat-head"><span>HOY</span><b>✓</b></div><strong id="statToday">0</strong><small>actividades</small></article>
+          <article class="stat-card"><div class="stat-head"><span>PENDIENTES</span><b>!</b></div><strong id="statPending">0</strong><small>por completar</small></article>
+          <article class="stat-card"><div class="stat-head"><span>ESTE MES</span><b>◫</b></div><strong id="statMonth">0</strong><small>registros</small></article>
+          <article class="stat-card"><div class="stat-head"><span>VALOR DEL MES</span><b>$</b></div><strong id="statAmount">$0.00</strong><small>total registrado</small></article>
+        </div>
+
+        <div class="dashboard-grid">
+          <article class="card">
+            <div class="card-head inline"><div><h3>Plantillas rápidas</h3><p>Tus combinaciones favoritas.</p></div><button class="text-button" data-go-page="settings" data-settings-anchor="templatesSection">Administrar</button></div>
+            <div id="quickTemplates" class="quick-template-strip"></div>
+            <form id="quickForm">
+              <div class="form-grid">
+                <div class="field"><label for="quickPlace">Lugar</label><select id="quickPlace" class="control" required></select></div>
+                <div class="field"><label for="quickType">Actividad</label><select id="quickType" class="control" required></select></div>
+                <div class="field"><label for="quickValue">Valor opcional</label><input id="quickValue" class="control" inputmode="decimal" placeholder="0.00"></div>
+                <div class="field"><label for="quickStatus">Estado</label><select id="quickStatus" class="control"></select></div>
+                <div class="field full"><label for="quickNote">Nota opcional</label><input id="quickNote" class="control" maxlength="180" placeholder="Detalle adicional..."></div>
+              </div>
+              <div id="quickNoteChips" class="note-chips"></div>
+              <div class="form-actions"><button id="quickSaveBtn" class="button button-primary" type="submit">Guardar actividad</button></div>
+            </form>
+          </article>
+
+          <article class="card">
+            <div class="card-head inline"><div><h3>Actividad reciente</h3><p>Últimos movimientos del mes.</p></div><button class="text-button" data-go-page="history">Ver todo</button></div>
+            <div id="recentList" class="activity-list"></div>
+          </article>
+        </div>
+
+        <div class="dashboard-grid lower-grid">
+          <article class="card">
+            <div class="card-head inline"><div><h3>Pendientes</h3><p>Lo que todavía falta resolver.</p></div><button class="text-button" data-go-page="agenda">Abrir jornada</button></div>
+            <div id="pendingList" class="activity-list"></div>
+          </article>
+          <article class="card">
+            <div class="card-head"><div><h3>Línea de tiempo de hoy</h3><p>Tu jornada ordenada por hora.</p></div></div>
+            <div id="todayTimeline" class="timeline"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="page-agenda" class="page">
+        <div class="section-title">
+          <div><h2>Jornada</h2><p>Planifica paradas y conviértelas en actividades realizadas.</p></div>
+          <div class="section-actions"><input id="agendaDate" class="control compact-control" type="date"><button id="addStopBtn" class="button button-primary">＋ Agregar parada</button></div>
+        </div>
+        <div class="agenda-grid">
+          <article class="card">
+            <div class="card-head inline"><div><h3>Recorrido del día</h3><p>Arrastra mentalmente tu orden; completa cada parada desde aquí.</p></div><span id="agendaProgress" class="chip">0 / 0</span></div>
+            <div id="agendaList" class="agenda-list"></div>
+          </article>
+          <article class="card sticky-card">
+            <div class="card-head"><div><h3>Resumen de jornada</h3><p>Se actualiza en tiempo real.</p></div></div>
+            <div class="summary-stack">
+              <div><span>Realizadas</span><strong id="agendaDone">0</strong></div>
+              <div><span>Pendientes</span><strong id="agendaPending">0</strong></div>
+              <div><span>Lugares</span><strong id="agendaPlaces">0</strong></div>
+              <div><span>Valor</span><strong id="agendaAmount">$0.00</strong></div>
+            </div>
+            <button id="finishDayBtn" class="button button-primary button-block">Finalizar jornada</button>
+          </article>
+        </div>
+      </section>
+
+      <section id="page-places" class="page">
+        <div class="section-title"><div><h2>Lugares frecuentes</h2><p>Guárdalos una sola vez y reutilízalos.</p></div><button id="newPlaceBtn" class="button button-primary">＋ Añadir lugar</button></div>
+        <div class="tabs"><button class="tab active" data-place-tab="active">Activos</button><button class="tab" data-place-tab="archived">Archivados</button></div>
+        <div class="toolbar"><input id="placeSearch" class="control grow" type="search" placeholder="Buscar lugar, dirección o categoría..."><select id="placeCategoryFilter" class="control"></select></div>
+        <div id="placesGrid" class="places-grid"></div>
+      </section>
+
+      <section id="page-history" class="page">
+        <div class="section-title"><div><h2>Historial</h2><p>Busca por texto, fecha, lugar, actividad, estado, prioridad o valor.</p></div><button class="button button-primary" data-open-activity>＋ Registrar</button></div>
+        <div class="quick-filters"><button class="filter-pill" data-history-preset="today">Hoy</button><button class="filter-pill" data-history-preset="week">Esta semana</button><button class="filter-pill active" data-history-preset="month">Este mes</button><button class="filter-pill" data-history-preset="pending">Pendientes</button><button class="filter-pill" data-history-preset="clear">Limpiar</button></div>
+        <div class="toolbar history-toolbar">
+          <input id="historySearch" class="control grow" type="search" placeholder="Buscar...">
+          <input id="historyMonth" class="control" type="month">
+          <input id="historyDay" class="control" type="date" title="Día exacto">
+          <input id="historyFrom" class="control" type="date" title="Desde">
+          <input id="historyTo" class="control" type="date" title="Hasta">
+          <select id="historyPlace" class="control"></select>
+          <select id="historyType" class="control"></select>
+          <select id="historyStatus" class="control"></select>
+          <select id="historyPriority" class="control"></select>
+          <select id="historyMoney" class="control"><option value="">Con y sin valor</option><option value="yes">Con valor</option><option value="no">Sin valor</option></select>
+          <button id="exportCsvBtn" class="button button-ghost">CSV</button>
+        </div>
+        <article class="card table-card"><div class="table-scroll"><table><thead><tr><th>Fecha</th><th>Hora</th><th>Lugar</th><th>Actividad</th><th>Nota / etiquetas</th><th>Valor</th><th>Estado</th><th>Prioridad</th><th>Acciones</th></tr></thead><tbody id="historyBody"></tbody></table></div><div id="historyEmpty" class="empty hidden">No hay registros que coincidan con los filtros.</div></article>
+      </section>
+
+      <section id="page-calendar" class="page">
+        <div class="section-title"><div><h2>Calendario</h2><p>Los días con más actividad se muestran con mayor intensidad.</p></div><input id="calendarMonth" class="control compact-control" type="month"></div>
+        <div class="calendar-layout">
+          <article class="calendar-card card"><div class="calendar-header"><button id="calendarPrev" class="icon-button">‹</button><h3 id="calendarTitle">Mes</h3><button id="calendarNext" class="icon-button">›</button></div><div class="calendar-weekdays"><span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span></div><div id="calendarGrid" class="calendar-grid"></div></article>
+          <article class="card"><div class="card-head"><div><h3 id="calendarDayTitle">Selecciona un día</h3><p id="calendarDaySubtitle">Verás aquí sus actividades.</p></div></div><div id="calendarDayList" class="activity-list"></div></article>
+        </div>
+      </section>
+
+      <section id="page-reports" class="page">
+        <div class="section-title"><div><h2>Reportes</h2><p>Las estadísticas se calculan localmente. El año completo solo se carga si tú lo pides.</p></div><div class="section-actions"><input id="reportMonth" class="control compact-control" type="month"><button id="loadYearBtn" class="button button-ghost">Analizar año</button><button id="printReportBtn" class="button button-ghost">Imprimir</button></div></div>
+        <div class="stats-grid">
+          <article class="stat-card"><div class="stat-head"><span>ACTIVIDADES</span><b>✓</b></div><strong id="reportActivities">0</strong><small>en el período</small></article>
+          <article class="stat-card"><div class="stat-head"><span>LUGARES</span><b>⌖</b></div><strong id="reportPlaces">0</strong><small>distintos</small></article>
+          <article class="stat-card"><div class="stat-head"><span>DÍAS ACTIVOS</span><b>◫</b></div><strong id="reportDays">0</strong><small>con registros</small></article>
+          <article class="stat-card"><div class="stat-head"><span>VALOR TOTAL</span><b>$</b></div><strong id="reportAmount">$0.00</strong><small>del período</small></article>
+        </div>
+        <div class="report-grid">
+          <article class="card"><div class="card-head"><div><h3>Lugares más visitados</h3><p>Ranking local del mes.</p></div></div><div id="reportPlacesList" class="report-list"></div></article>
+          <article class="card"><div class="card-head"><div><h3>Actividades más frecuentes</h3><p>Ranking local del mes.</p></div></div><div id="reportTypesList" class="report-list"></div></article>
+        </div>
+        <div class="report-grid lower-grid">
+          <article class="card"><div class="card-head"><div><h3>Estado de actividades</h3><p>Realizadas, pendientes y canceladas.</p></div></div><div id="reportStatusList" class="report-list"></div></article>
+          <article class="card"><div class="card-head"><div><h3>Indicadores</h3><p>Resumen de productividad.</p></div></div><div id="reportIndicators" class="indicator-list"></div></article>
+        </div>
+      </section>
+
+      <section id="page-settings" class="page">
+        <div class="section-title"><div><h2>Ajustes</h2><p>Personaliza la experiencia, catálogos, copias y seguridad.</p></div></div>
+
+        <div class="settings-grid">
+          <article class="card" id="appearanceSection">
+            <div class="card-head"><div><h3>Apariencia</h3><p>Preferencias locales, sin consumo de Firebase.</p></div></div>
+            <div class="setting-row"><div><strong>Tema</strong><span>Claro, oscuro o según el dispositivo.</span></div><div class="segmented"><button class="segment" data-theme-mode="light">Claro</button><button class="segment" data-theme-mode="dark">Oscuro</button><button class="segment" data-theme-mode="auto">Auto</button></div></div>
+            <div class="setting-row"><div><strong>Color de acento</strong><span>Personaliza el color principal.</span></div><div id="accentChoices" class="accent-choices"><button data-accent="violet" class="accent-dot violet"></button><button data-accent="blue" class="accent-dot blue"></button><button data-accent="green" class="accent-dot green"></button><button data-accent="rose" class="accent-dot rose"></button></div></div>
+            <div class="setting-row"><div><strong>Densidad</strong><span>Más información o más espacio visual.</span></div><div class="segmented"><button class="segment" data-density="comfortable">Cómoda</button><button class="segment" data-density="compact">Compacta</button></div></div>
+          </article>
+
+          <article class="card" id="syncSection">
+            <div class="card-head"><div><h3>Sincronización</h3><p>Local-first con Firestore como respaldo y sincronización.</p></div></div>
+            <div class="setting-row"><div><strong>Estado</strong><span id="settingsSyncDetail">Todo guardado.</span></div><span id="settingsSyncBadge" class="chip">✓ Guardado</span></div>
+            <div class="setting-row"><div><strong>Sincronizar ahora</strong><span>Actualiza configuración y mes actual.</span></div><button id="settingsSyncBtn" class="button button-ghost button-small">↻ Sincronizar</button></div>
+            <div class="setting-row"><div><strong>Dispositivo de confianza</strong><span>Define persistencia local entre sesiones.</span></div><label class="switch"><input id="trustedDeviceToggle" type="checkbox"><span></span></label></div>
+            <div class="setting-row"><div><strong>Instalar WorkLog</strong><span>Úsalo como app en Android o Windows.</span></div><button id="installPwaBtn" class="button button-ghost button-small" disabled>Instalar</button></div>
+          </article>
+        </div>
+
+        <div class="settings-grid lower-grid">
+          <article class="card" id="typesSection"><div class="card-head inline"><div><h3>Tipos de actividad</h3><p>Crea, edita, marca favoritas o archiva.</p></div><button id="newTypeBtn" class="button button-primary button-small">＋ Crear</button></div><div class="tabs"><button class="tab active" data-type-tab="active">Activas</button><button class="tab" data-type-tab="archived">Archivadas</button></div><div id="typesManager" class="manager-list"></div></article>
+          <article class="card" id="categoriesSection"><div class="card-head inline"><div><h3>Categorías de lugares</h3><p>No estás limitado a Banco, Cliente o Trámite.</p></div><button id="newCategoryBtn" class="button button-primary button-small">＋ Crear</button></div><div class="tabs"><button class="tab active" data-category-tab="active">Activas</button><button class="tab" data-category-tab="archived">Archivadas</button></div><div id="categoriesManager" class="manager-list"></div></article>
+        </div>
+
+        <div class="settings-grid lower-grid">
+          <article class="card" id="templatesSection"><div class="card-head inline"><div><h3>Plantillas rápidas</h3><p>Combina lugar + actividad para registrar en pocos toques.</p></div><button id="newTemplateBtn" class="button button-primary button-small">＋ Crear</button></div><div id="templatesManager" class="manager-list"></div></article>
+          <article class="card" id="notesSection"><div class="card-head inline"><div><h3>Notas rápidas</h3><p>Frases reutilizables como “entregado” o “volver mañana”.</p></div><button id="newNoteBtn" class="button button-primary button-small">＋ Crear</button></div><div id="notesManager" class="manager-list"></div></article>
+        </div>
+
+        <div class="settings-grid lower-grid">
+          <article class="card" id="backupSection">
+            <div class="card-head"><div><h3>Copias e importación</h3><p>Solo se consulta todo el historial cuando tú lo solicitas.</p></div></div>
+            <div class="setting-row"><div><strong>Exportar mes</strong><span>CSV compatible con Excel.</span></div><button id="settingsExportMonthBtn" class="button button-ghost button-small">CSV</button></div>
+            <div class="setting-row"><div><strong>Copia completa</strong><span>JSON restaurable con configuración y meses.</span></div><button id="exportAllJsonBtn" class="button button-ghost button-small">JSON</button></div>
+            <div class="setting-row"><div><strong>Importar copia JSON</strong><span>Valida antes de escribir.</span></div><button id="importJsonBtn" class="button button-ghost button-small">Importar</button></div>
+            <div class="setting-row"><div><strong>Importar CSV</strong><span>Crea lugares/actividades faltantes si es necesario.</span></div><button id="importCsvBtn" class="button button-ghost button-small">Importar</button></div>
+            <input id="jsonFileInput" type="file" accept="application/json,.json" hidden>
+            <input id="csvFileInput" type="file" accept="text/csv,.csv" hidden>
+          </article>
+
+          <article class="card" id="securitySection">
+            <div class="card-head"><div><h3>Seguridad local</h3><p>Opciones extra para este dispositivo.</p></div></div>
+            <div class="setting-row"><div><strong>PIN local</strong><span id="pinStatusText">No configurado.</span></div><button id="pinManageBtn" class="button button-ghost button-small">Configurar</button></div>
+            <div class="setting-row"><div><strong>Bloqueo al volver</strong><span>Solicita PIN después de varios minutos fuera.</span></div><select id="pinTimeoutSelect" class="control mini-control"><option value="0">Nunca</option><option value="1">1 min</option><option value="5">5 min</option><option value="15">15 min</option></select></div>
+          </article>
+        </div>
+
+        <div class="settings-grid lower-grid">
+          <article class="card" id="trashSection"><div class="card-head"><div><h3>Papelera del mes actual</h3><p>Los registros eliminados se pueden restaurar antes de purgarlos.</p></div></div><div id="trashManager" class="manager-list"></div></article>
+          <article class="card" id="accountSection">
+            <div class="card-head"><div><h3>Cuenta</h3><p>Firebase Authentication.</p></div></div>
+            <div class="setting-row"><div><strong>Correo</strong><span id="settingsEmail">—</span></div><span id="emailVerifiedBadge" class="chip">—</span></div>
+            <div class="setting-row"><div><strong>Verificar correo</strong><span>Envía un enlace de verificación.</span></div><button id="verifyEmailBtn" class="button button-ghost button-small">Enviar</button></div>
+            <div class="setting-row"><div><strong>Cambiar contraseña</strong><span>Requiere tu contraseña actual.</span></div><button id="changePasswordBtn" class="button button-ghost button-small">Cambiar</button></div>
+            <div class="setting-row danger-row"><div><strong>Eliminar cuenta</strong><span>Elimina datos conocidos de WorkLog y la cuenta.</span></div><button id="deleteAccountBtn" class="button button-danger button-small">Eliminar</button></div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <nav class="mobile-bottom-nav">
+      <button data-page="dashboard" class="mobile-nav active"><span>⌂</span><small>Inicio</small></button>
+      <button data-page="agenda" class="mobile-nav"><span>✓</span><small>Jornada</small></button>
+      <button data-open-activity class="mobile-nav mobile-plus"><span>＋</span><small>Registrar</small></button>
+      <button data-page="history" class="mobile-nav"><span>≡</span><small>Historial</small></button>
+      <button id="mobileMoreBtn" class="mobile-nav"><span>•••</span><small>Más</small></button>
+    </nav>
+  </section>
+
+  <div id="activityModal" class="modal-backdrop">
+    <div class="modal modal-wide" role="dialog" aria-modal="true">
+      <div class="modal-head"><div><h3 id="activityModalTitle">Nueva actividad</h3><p id="activitySuggestion" class="modal-subtitle"></p></div><button class="icon-button" data-close-modal="activityModal">✕</button></div>
+      <form id="activityForm">
+        <input id="activityId" type="hidden"><input id="activityOriginalMonth" type="hidden">
+        <div class="form-grid">
+          <div class="field full"><label for="activityPlace">Lugar</label><select id="activityPlace" class="control" required></select></div>
+          <div class="field"><label for="activityDate">Fecha</label><input id="activityDate" class="control" type="date" required></div>
+          <div class="field"><label for="activityTime">Hora</label><input id="activityTime" class="control" type="time" required></div>
+          <div class="field"><label for="activityType">Actividad</label><select id="activityType" class="control" required></select></div>
+          <div class="field"><label for="activityValue">Valor opcional ($)</label><input id="activityValue" class="control" inputmode="decimal" placeholder="0.00"></div>
+          <div class="field"><label for="activityStatus">Estado</label><select id="activityStatus" class="control"></select></div>
+          <div class="field"><label for="activityPriority">Prioridad</label><select id="activityPriority" class="control"></select></div>
+          <div class="field"><label for="activityDueDate">Pendiente hasta</label><input id="activityDueDate" class="control" type="date"></div>
+          <div class="field full"><label for="activityNote">Nota</label><textarea id="activityNote" class="control textarea" maxlength="180" placeholder="Detalle adicional..."></textarea><div id="activityNoteChips" class="note-chips"></div></div>
+          <div class="field full"><label for="activityTags">Etiquetas</label><input id="activityTags" class="control" maxlength="120" placeholder="urgente, documentos, empresa"></div>
+        </div>
+        <div class="form-actions"><button type="button" class="button button-ghost" data-close-modal="activityModal">Cancelar</button><button id="activitySaveBtn" class="button button-primary" type="submit">Guardar actividad</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="placeModal" class="modal-backdrop"><div class="modal"><div class="modal-head"><h3 id="placeModalTitle">Nuevo lugar</h3><button class="icon-button" data-close-modal="placeModal">✕</button></div><form id="placeForm"><input id="placeId" type="hidden"><div class="field"><label for="placeName">Nombre</label><input id="placeName" class="control" maxlength="70" required></div><div class="field"><label for="placeAddress">Dirección / sucursal</label><input id="placeAddress" class="control" maxlength="120"></div><div class="field"><label for="placeCategory">Categoría</label><select id="placeCategory" class="control"></select></div><div class="field"><label for="placeReference">Referencia</label><input id="placeReference" class="control" maxlength="100"></div><div class="form-actions"><button type="button" class="button button-ghost" data-close-modal="placeModal">Cancelar</button><button class="button button-primary" type="submit">Guardar lugar</button></div></form></div></div>
+
+  <div id="typeModal" class="modal-backdrop"><div class="modal"><div class="modal-head"><h3 id="typeModalTitle">Nuevo tipo de actividad</h3><button class="icon-button" data-close-modal="typeModal">✕</button></div><form id="typeForm"><input id="typeId" type="hidden"><div class="field"><label for="typeName">Nombre</label><input id="typeName" class="control" maxlength="60" required></div><div class="field"><label for="typeIcon">Icono</label><select id="typeIcon" class="control"><option>↓</option><option>↑</option><option>▣</option><option>$</option><option>◇</option><option>⌖</option><option>✓</option><option>★</option><option>•</option></select></div><label class="check-row"><input id="typeFavorite" type="checkbox"><span><strong>Favorita</strong><small>Mostrar primero en los selectores.</small></span></label><div class="form-actions"><button type="button" class="button button-ghost" data-close-modal="typeModal">Cancelar</button><button class="button button-primary" type="submit">Guardar</button></div></form></div></div>
+
+  <div id="categoryModal" class="modal-backdrop"><div class="modal"><div class="modal-head"><h3 id="categoryModalTitle">Nueva categoría</h3><button class="icon-button" data-close-modal="categoryModal">✕</button></div><form id="categoryForm"><input id="categoryId" type="hidden"><div class="field"><label for="categoryName">Nombre</label><input id="categoryName" class="control" maxlength="50" required></div><div class="field"><label for="categoryIcon">Icono</label><select id="categoryIcon" class="control"><option>⌖</option><option>🏦</option><option>▣</option><option>◇</option><option>★</option><option>•</option></select></div><div class="form-actions"><button type="button" class="button button-ghost" data-close-modal="categoryModal">Cancelar</button><button class="button button-primary" type="submit">Guardar</button></div></form></div></div>
+
+  <div id="templateModal" class="modal-backdrop"><div class="modal"><div class="modal-head"><h3 id="templateModalTitle">Nueva plantilla</h3><button class="icon-button" data-close-modal="templateModal">✕</button></div><form id="templateForm"><input id="templateId" type="hidden"><div class="field"><label for="templateName">Nombre opcional</label><input id="templateName" class="control" maxlength="60" placeholder="Ej. Depósito habitual"></div><div class="field"><label for="templatePlace">Lugar</label><select id="templatePlace" class="control" required></select></div><div class="field"><label for="templateType">Actividad</label><select id="templateType" class="control" required></select></div><div class="field"><label for="templateNote">Nota predeterminada</label><input id="templateNote" class="control" maxlength="120"></div><div class="form-actions"><button type="button" class="button button-ghost" data-close-modal="templateModal">Cancelar</button><button class="button button-primary" type="submit">Guardar plantilla</button></div></form></div></div>
+
+  <div id="noteModal" class="modal-backdrop"><div class="modal"><div class="modal-head"><h3>Nueva nota rápida</h3><button class="icon-button" data-close-modal="noteModal">✕</button></div><form id="noteForm"><div class="field"><label for="noteText">Texto</label><input id="noteText" class="control" maxlength="100" required placeholder="Ej. Entregado y recibido"></div><div class="form-actions"><button type="button" class="button button-ghost" data-close-modal="noteModal">Cancelar</button><button class="button button-primary" type="submit">Guardar</button></div></form></div></div>
+
+  <div id="confirmModal" class="modal-backdrop"><div class="modal modal-small"><div class="modal-head"><h3 id="confirmTitle">Confirmar</h3></div><p id="confirmText" class="confirm-text"></p><div class="form-actions"><button id="confirmCancel" class="button button-ghost">Cancelar</button><button id="confirmOk" class="button button-danger">Confirmar</button></div></div></div>
+
+  <div id="accountModal" class="modal-backdrop"><div class="modal"><div class="modal-head"><h3 id="accountModalTitle">Confirmar identidad</h3><button class="icon-button" data-close-modal="accountModal">✕</button></div><form id="accountForm"><input id="accountAction" type="hidden"><div class="field"><label for="accountCurrentPassword">Contraseña actual</label><input id="accountCurrentPassword" class="control" type="password" required></div><div id="newPasswordField" class="field hidden"><label for="accountNewPassword">Nueva contraseña</label><input id="accountNewPassword" class="control" type="password" minlength="6"></div><div class="form-actions"><button type="button" class="button button-ghost" data-close-modal="accountModal">Cancelar</button><button id="accountSubmitBtn" class="button button-primary" type="submit">Continuar</button></div></form></div></div>
+
+  <div id="pinModal" class="modal-backdrop"><div class="modal modal-small"><div class="modal-head"><h3 id="pinModalTitle">PIN local</h3><button class="icon-button" data-close-modal="pinModal">✕</button></div><form id="pinForm"><div class="field"><label for="pinInput">Nuevo PIN de 4 a 8 dígitos</label><input id="pinInput" class="control" type="password" inputmode="numeric" pattern="[0-9]{4,8}" maxlength="8"></div><div class="field"><label for="pinConfirmInput">Confirmar PIN</label><input id="pinConfirmInput" class="control" type="password" inputmode="numeric" pattern="[0-9]{4,8}" maxlength="8"></div><div class="form-actions"><button id="removePinBtn" type="button" class="button button-danger hidden">Quitar PIN</button><button class="button button-primary" type="submit">Guardar PIN</button></div></form></div></div>
+
+  <div id="daySummaryModal" class="modal-backdrop"><div class="modal"><div class="modal-head"><h3>Resumen de jornada</h3><button class="icon-button" data-close-modal="daySummaryModal">✕</button></div><div id="daySummaryContent"></div><div class="form-actions"><button id="movePendingTomorrowBtn" class="button button-ghost">Pasar pendientes a mañana</button><button class="button button-primary" data-close-modal="daySummaryModal">Listo</button></div></div></div>
+
+  <div id="pinLock" class="pin-lock hidden"><div class="pin-lock-card"><div class="brand"><div class="brand-mark">W</div><span>WorkLog</span></div><h2>WorkLog bloqueado</h2><p>Ingresa tu PIN local para continuar.</p><form id="unlockForm"><input id="unlockPin" class="control pin-center" type="password" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="••••"><button class="button button-primary button-block" type="submit">Desbloquear</button></form><button id="unlockLogoutBtn" class="text-button">Cerrar sesión</button></div></div>
+
+  <div id="fatalError" class="fatal-error hidden"><div class="fatal-card"><div class="fatal-icon">!</div><h2>No pudimos cargar WorkLog</h2><p id="fatalErrorText">Ocurrió un problema inesperado.</p><div class="fatal-actions"><button id="fatalRetryBtn" class="button button-primary">Reintentar</button><button id="fatalReloadBtn" class="button button-ghost">Recargar página</button></div></div></div>
+
+  <div id="toastContainer" class="toast-container"></div>
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

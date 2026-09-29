@@ -1,0 +1,1955 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  >
+
+  <meta
+    name="theme-color"
+    content="#0b0e14"
+  >
+
+  <meta
+    name="robots"
+    content="noindex,nofollow"
+  >
+
+  <meta
+    name="description"
+    content="Panel administrativo de WorkLog"
+  >
+
+  <link
+    rel="icon"
+    href="/icons/icon-192.png"
+    sizes="192x192"
+  >
+
+  <link
+    rel="stylesheet"
+    href="/css/styles.css"
+  >
+
+  <title>Administración | WorkLog</title>
+
+  <style>
+    /* =====================================================
+       ADMIN
+       Estas reglas son exclusivas de /admin.
+       No modifican la interfaz normal de WorkLog.
+       ===================================================== */
+
+    body.admin-page{
+      min-height:100vh;
+    }
+
+    .admin-hidden{
+      display:none!important;
+    }
+
+    .admin-boot{
+      position:fixed;
+      inset:0;
+      z-index:9999;
+
+      display:grid;
+      place-items:center;
+
+      padding:20px;
+
+      background:var(--bg);
+    }
+
+    .admin-boot-content{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+
+      gap:14px;
+
+      text-align:center;
+    }
+
+    .admin-boot-content p{
+      margin:0;
+
+      color:var(--muted);
+
+      font-size:12px;
+    }
+
+    .admin-auth-shell{
+      min-height:100vh;
+
+      display:grid;
+      place-items:center;
+
+      padding:
+        max(20px,env(safe-area-inset-top))
+        max(16px,env(safe-area-inset-right))
+        max(20px,env(safe-area-inset-bottom))
+        max(16px,env(safe-area-inset-left));
+    }
+
+    .admin-auth-card{
+      width:min(430px,100%);
+
+      padding:26px;
+
+      border:1px solid var(--line);
+
+      border-radius:24px;
+
+      background:var(--surface);
+
+      box-shadow:var(--shadow);
+    }
+
+    .admin-auth-brand{
+      display:flex;
+      align-items:center;
+
+      gap:10px;
+
+      margin-bottom:24px;
+    }
+
+    .admin-auth-brand strong{
+      font-size:18px;
+    }
+
+    .admin-auth-card h1{
+      margin:0 0 7px;
+
+      font-size:25px;
+
+      letter-spacing:-.6px;
+    }
+
+    .admin-auth-card>p{
+      margin:0 0 20px;
+
+      color:var(--muted);
+
+      font-size:11px;
+
+      line-height:1.55;
+    }
+
+    .admin-login-message{
+      margin-bottom:14px;
+
+      padding:11px 12px;
+
+      border-radius:11px;
+
+      border:1px solid var(--line);
+
+      background:var(--surface2);
+
+      color:var(--muted);
+
+      font-size:10px;
+
+      line-height:1.5;
+    }
+
+    .admin-login-message.error{
+      color:#ff9fa7;
+
+      border-color:
+        color-mix(
+          in srgb,
+          var(--danger) 35%,
+          var(--line)
+        );
+
+      background:
+        color-mix(
+          in srgb,
+          var(--danger) 8%,
+          var(--surface)
+        );
+    }
+
+    .admin-login-message.success{
+      color:#8ae9c7;
+
+      border-color:
+        color-mix(
+          in srgb,
+          var(--success) 35%,
+          var(--line)
+        );
+    }
+
+    .admin-denied{
+      min-height:100vh;
+
+      display:grid;
+      place-items:center;
+
+      padding:20px;
+    }
+
+    .admin-denied-card{
+      width:min(480px,100%);
+
+      padding:28px;
+
+      text-align:center;
+
+      border:1px solid var(--line);
+
+      border-radius:24px;
+
+      background:var(--surface);
+
+      box-shadow:var(--shadow);
+    }
+
+    .admin-denied-icon{
+      width:58px;
+      height:58px;
+
+      margin:0 auto 15px;
+
+      display:grid;
+      place-items:center;
+
+      border-radius:18px;
+
+      background:
+        color-mix(
+          in srgb,
+          var(--danger) 12%,
+          var(--surface2)
+        );
+
+      color:var(--danger);
+
+      font-size:25px;
+
+      font-weight:900;
+    }
+
+    .admin-denied-card h1{
+      margin:0 0 8px;
+
+      font-size:23px;
+    }
+
+    .admin-denied-card p{
+      margin:0 0 19px;
+
+      color:var(--muted);
+
+      font-size:11px;
+
+      line-height:1.6;
+    }
+
+    .admin-denied-actions{
+      display:flex;
+      justify-content:center;
+
+      gap:8px;
+
+      flex-wrap:wrap;
+    }
+
+    .admin-shell{
+      width:100%;
+
+      min-height:100vh;
+    }
+
+    .admin-main{
+      width:min(1440px,100%);
+
+      margin:0 auto;
+
+      padding:
+        max(18px,env(safe-area-inset-top))
+        24px
+        max(45px,env(safe-area-inset-bottom));
+    }
+
+    .admin-topbar{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+
+      gap:18px;
+
+      margin-bottom:22px;
+
+      padding:12px 0 17px;
+
+      border-bottom:1px solid var(--line);
+    }
+
+    .admin-title{
+      min-width:0;
+    }
+
+    .admin-title-row{
+      display:flex;
+      align-items:center;
+
+      gap:10px;
+    }
+
+    .admin-title h1{
+      margin:0;
+
+      font-size:26px;
+
+      letter-spacing:-.7px;
+    }
+
+    .admin-badge{
+      display:inline-flex;
+      align-items:center;
+
+      padding:5px 8px;
+
+      border-radius:999px;
+
+      background:
+        color-mix(
+          in srgb,
+          var(--primary) 12%,
+          transparent
+        );
+
+      border:
+        1px solid
+        color-mix(
+          in srgb,
+          var(--primary) 25%,
+          var(--line)
+        );
+
+      color:
+        color-mix(
+          in srgb,
+          var(--primary) 55%,
+          #fff
+        );
+
+      font-size:8px;
+
+      font-weight:900;
+
+      letter-spacing:.4px;
+    }
+
+    .admin-title p{
+      margin:4px 0 0;
+
+      color:var(--muted);
+
+      font-size:10px;
+    }
+
+    .admin-top-actions{
+      display:flex;
+      align-items:center;
+
+      gap:8px;
+    }
+
+    .admin-user-chip{
+      min-width:0;
+
+      max-width:260px;
+
+      padding:9px 11px;
+
+      border:1px solid var(--line);
+
+      border-radius:12px;
+
+      background:var(--surface);
+
+      color:var(--muted);
+
+      font-size:9px;
+
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+
+    .admin-stats{
+      display:grid;
+
+      grid-template-columns:
+        repeat(4,minmax(0,1fr));
+
+      gap:11px;
+
+      margin-bottom:16px;
+    }
+
+    .admin-stat{
+      min-width:0;
+
+      padding:16px;
+
+      border:1px solid var(--line);
+
+      border-radius:18px;
+
+      background:var(--surface);
+
+      box-shadow:
+        0 10px 30px
+        rgba(0,0,0,.06);
+    }
+
+    .admin-stat span{
+      display:block;
+
+      margin-bottom:8px;
+
+      color:var(--muted);
+
+      font-size:8px;
+
+      font-weight:900;
+
+      letter-spacing:.55px;
+
+      text-transform:uppercase;
+    }
+
+    .admin-stat strong{
+      display:block;
+
+      font-size:26px;
+
+      letter-spacing:-.8px;
+    }
+
+    .admin-toolbar-card{
+      margin-bottom:14px;
+
+      padding:14px;
+
+      border:1px solid var(--line);
+
+      border-radius:18px;
+
+      background:var(--surface);
+    }
+
+    .admin-toolbar{
+      display:grid;
+
+      grid-template-columns:
+        minmax(220px,1fr)
+        minmax(150px,210px)
+        auto
+        auto;
+
+      gap:8px;
+
+      align-items:center;
+    }
+
+    .admin-content-card{
+      padding:17px;
+
+      border:1px solid var(--line);
+
+      border-radius:20px;
+
+      background:var(--surface);
+
+      box-shadow:
+        0 12px 35px
+        rgba(0,0,0,.06);
+    }
+
+    .admin-content-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+
+      gap:12px;
+
+      margin-bottom:14px;
+    }
+
+    .admin-content-head h2{
+      margin:0;
+
+      font-size:16px;
+    }
+
+    .admin-content-head p{
+      margin:4px 0 0;
+
+      color:var(--muted);
+
+      font-size:9px;
+    }
+
+    .admin-list{
+      display:flex;
+      flex-direction:column;
+
+      gap:8px;
+    }
+
+    .admin-user-card{
+      display:grid;
+
+      grid-template-columns:
+        minmax(0,1.5fr)
+        minmax(150px,.7fr)
+        minmax(130px,.55fr)
+        auto;
+
+      align-items:center;
+
+      gap:12px;
+
+      padding:13px;
+
+      border:1px solid var(--line);
+
+      border-radius:15px;
+
+      background:var(--surface2);
+    }
+
+    .admin-user-main{
+      min-width:0;
+    }
+
+    .admin-user-main strong{
+      display:block;
+
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+
+      font-size:11px;
+    }
+
+    .admin-user-main span{
+      display:block;
+
+      margin-top:3px;
+
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+
+      color:var(--muted);
+
+      font-size:8px;
+    }
+
+    .admin-user-meta{
+      min-width:0;
+    }
+
+    .admin-user-meta span{
+      display:block;
+
+      color:var(--muted);
+
+      font-size:8px;
+    }
+
+    .admin-user-meta strong{
+      display:block;
+
+      margin-top:3px;
+
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+
+      font-size:9px;
+    }
+
+    .admin-status{
+      display:inline-flex;
+      align-items:center;
+
+      width:max-content;
+
+      max-width:100%;
+
+      padding:5px 8px;
+
+      border-radius:999px;
+
+      font-size:8px;
+
+      font-weight:900;
+
+      white-space:nowrap;
+    }
+
+    .admin-status.active{
+      color:var(--success);
+
+      background:
+        color-mix(
+          in srgb,
+          var(--success) 10%,
+          transparent
+        );
+    }
+
+    .admin-status.suspended{
+      color:var(--warning);
+
+      background:
+        color-mix(
+          in srgb,
+          var(--warning) 10%,
+          transparent
+        );
+    }
+
+    .admin-status.blocked{
+      color:var(--danger);
+
+      background:
+        color-mix(
+          in srgb,
+          var(--danger) 10%,
+          transparent
+        );
+    }
+
+    .admin-user-actions{
+      display:flex;
+
+      gap:6px;
+
+      justify-content:flex-end;
+    }
+
+    .admin-empty{
+      padding:35px 15px;
+
+      text-align:center;
+
+      color:var(--muted);
+
+      font-size:10px;
+    }
+
+    .admin-loading-list{
+      display:grid;
+
+      gap:8px;
+    }
+
+    .admin-loading-row{
+      height:72px;
+
+      border-radius:14px;
+
+      background:
+        linear-gradient(
+          90deg,
+          var(--surface2),
+          var(--surface3),
+          var(--surface2)
+        );
+
+      background-size:200% 100%;
+
+      animation:
+        adminLoading 1.1s linear infinite;
+    }
+
+    @keyframes adminLoading{
+      to{
+        background-position:-200% 0;
+      }
+    }
+
+    .admin-modal-backdrop{
+      position:fixed;
+
+      inset:0;
+
+      z-index:1000;
+
+      display:none;
+
+      align-items:center;
+      justify-content:center;
+
+      padding:18px;
+
+      background:
+        rgba(2,4,7,.76);
+
+      backdrop-filter:
+        blur(7px);
+    }
+
+    .admin-modal-backdrop.show{
+      display:flex;
+    }
+
+    .admin-modal{
+      width:min(540px,100%);
+
+      max-height:92vh;
+
+      overflow:auto;
+
+      padding:20px;
+
+      border:1px solid var(--line);
+
+      border-radius:22px;
+
+      background:var(--surface);
+
+      box-shadow:var(--shadow);
+    }
+
+    .admin-modal-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+
+      gap:10px;
+
+      margin-bottom:17px;
+    }
+
+    .admin-modal-head h3{
+      margin:0;
+
+      font-size:18px;
+    }
+
+    .admin-modal-head p{
+      margin:4px 0 0;
+
+      color:var(--muted);
+
+      font-size:9px;
+    }
+
+    .admin-account-box{
+      margin-bottom:14px;
+
+      padding:12px;
+
+      border:1px solid var(--line);
+
+      border-radius:13px;
+
+      background:var(--surface2);
+    }
+
+    .admin-account-box strong,
+    .admin-account-box span{
+      display:block;
+
+      overflow-wrap:anywhere;
+    }
+
+    .admin-account-box strong{
+      font-size:11px;
+    }
+
+    .admin-account-box span{
+      margin-top:3px;
+
+      color:var(--muted);
+
+      font-size:8px;
+    }
+
+    .admin-action-grid{
+      display:grid;
+
+      grid-template-columns:
+        1fr 1fr;
+
+      gap:8px;
+
+      margin:12px 0;
+    }
+
+    .admin-action-grid .button{
+      width:100%;
+    }
+
+    .admin-custom-block{
+      margin-top:12px;
+
+      padding-top:12px;
+
+      border-top:1px solid var(--line);
+    }
+
+    .admin-info-box{
+      margin-top:12px;
+
+      padding:11px;
+
+      border:1px solid var(--line);
+
+      border-radius:12px;
+
+      background:var(--surface2);
+
+      color:var(--muted);
+
+      font-size:9px;
+
+      line-height:1.55;
+    }
+
+    .admin-info-box strong{
+      color:var(--text);
+    }
+
+    .admin-form-actions{
+      display:flex;
+      justify-content:flex-end;
+
+      gap:8px;
+
+      margin-top:16px;
+    }
+
+    .admin-toast-container{
+      position:fixed;
+
+      right:16px;
+      bottom:18px;
+
+      z-index:2000;
+
+      display:flex;
+      flex-direction:column;
+
+      gap:7px;
+    }
+
+    .admin-toast{
+      width:min(370px,calc(100vw - 32px));
+
+      padding:11px 13px;
+
+      border:1px solid var(--line);
+
+      border-radius:12px;
+
+      background:var(--surface3);
+
+      box-shadow:var(--shadow);
+
+      font-size:10px;
+
+      line-height:1.45;
+    }
+
+    .admin-toast.success{
+      border-color:
+        color-mix(
+          in srgb,
+          var(--success) 35%,
+          var(--line)
+        );
+    }
+
+    .admin-toast.error{
+      border-color:
+        color-mix(
+          in srgb,
+          var(--danger) 35%,
+          var(--line)
+        );
+    }
+
+    @media(max-width:850px){
+
+      .admin-main{
+        padding:
+          max(12px,env(safe-area-inset-top))
+          max(12px,env(safe-area-inset-right))
+          max(30px,env(safe-area-inset-bottom))
+          max(12px,env(safe-area-inset-left));
+      }
+
+      .admin-topbar{
+        align-items:flex-start;
+      }
+
+      .admin-user-chip{
+        display:none;
+      }
+
+      .admin-stats{
+        grid-template-columns:
+          repeat(2,minmax(0,1fr));
+      }
+
+      .admin-toolbar{
+        grid-template-columns:
+          1fr 1fr;
+      }
+
+      .admin-toolbar #adminSearch{
+        grid-column:1/-1;
+      }
+
+      .admin-user-card{
+        grid-template-columns:
+          minmax(0,1fr)
+          auto;
+      }
+
+      .admin-user-meta{
+        grid-column:1;
+      }
+
+      .admin-user-status-wrap{
+        grid-column:2;
+        grid-row:1;
+      }
+
+      .admin-user-actions{
+        grid-column:1/-1;
+
+        justify-content:stretch;
+      }
+
+      .admin-user-actions .button{
+        flex:1;
+      }
+    }
+
+    @media(max-width:560px){
+
+      .admin-title h1{
+        font-size:21px;
+      }
+
+      .admin-top-actions .button span{
+        display:none;
+      }
+
+      .admin-stat{
+        padding:12px;
+      }
+
+      .admin-stat strong{
+        font-size:21px;
+      }
+
+      .admin-toolbar{
+        grid-template-columns:1fr;
+      }
+
+      .admin-toolbar #adminSearch{
+        grid-column:auto;
+      }
+
+      .admin-toolbar>*{
+        width:100%;
+      }
+
+      .admin-content-card{
+        padding:13px;
+      }
+
+      .admin-user-card{
+        display:flex;
+        flex-direction:column;
+        align-items:stretch;
+
+        gap:9px;
+      }
+
+      .admin-user-status-wrap{
+        order:2;
+      }
+
+      .admin-user-meta{
+        order:3;
+      }
+
+      .admin-user-actions{
+        order:4;
+
+        display:grid;
+
+        grid-template-columns:1fr;
+      }
+
+      .admin-modal-backdrop{
+        align-items:flex-end;
+
+        padding:0;
+      }
+
+      .admin-modal{
+        width:100%;
+
+        max-width:none;
+
+        max-height:94dvh;
+
+        border-left:0;
+        border-right:0;
+        border-bottom:0;
+
+        border-radius:
+          22px 22px 0 0;
+
+        padding:
+          19px
+          max(16px,env(safe-area-inset-right))
+          max(20px,calc(16px + env(safe-area-inset-bottom)))
+          max(16px,env(safe-area-inset-left));
+      }
+
+      .admin-action-grid{
+        grid-template-columns:1fr;
+      }
+
+      .admin-form-actions{
+        display:grid;
+
+        grid-template-columns:
+          1fr 1fr;
+      }
+
+      .admin-form-actions .button{
+        width:100%;
+      }
+
+      .admin-toast-container{
+        left:12px;
+        right:12px;
+
+        bottom:
+          max(
+            12px,
+            env(safe-area-inset-bottom)
+          );
+      }
+
+      .admin-toast{
+        width:100%;
+      }
+    }
+  </style>
+</head>
+
+
+<body class="admin-page">
+
+  <!-- ===================================================
+       CARGA
+       =================================================== -->
+
+  <div
+    id="adminBoot"
+    class="admin-boot"
+  >
+    <div class="admin-boot-content">
+
+      <div class="boot-logo">
+        W
+      </div>
+
+      <div class="spinner"></div>
+
+      <p>
+        Comprobando acceso administrativo...
+      </p>
+
+    </div>
+  </div>
+
+
+  <!-- ===================================================
+       LOGIN ADMIN
+       =================================================== -->
+
+  <section
+    id="adminLoginScreen"
+    class="admin-auth-shell admin-hidden"
+  >
+
+    <div class="admin-auth-card">
+
+      <div class="admin-auth-brand">
+
+        <div class="brand-mark">
+          W
+        </div>
+
+        <strong>
+          WorkLog Admin
+        </strong>
+
+      </div>
+
+
+      <h1>
+        Administración
+      </h1>
+
+      <p>
+        Inicia sesión con una cuenta autorizada como
+        administradora.
+      </p>
+
+
+      <div
+        id="adminLoginMessage"
+        class="admin-login-message admin-hidden"
+      ></div>
+
+
+      <form id="adminLoginForm">
+
+        <div class="field">
+
+          <label for="adminEmail">
+            Correo electrónico
+          </label>
+
+          <input
+            id="adminEmail"
+            class="control"
+            type="email"
+            autocomplete="email"
+            required
+            placeholder="correo@ejemplo.com"
+          >
+
+        </div>
+
+
+        <div class="field">
+
+          <label for="adminPassword">
+            Contraseña
+          </label>
+
+          <input
+            id="adminPassword"
+            class="control"
+            type="password"
+            autocomplete="current-password"
+            minlength="6"
+            required
+            placeholder="Contraseña"
+          >
+
+        </div>
+
+
+        <button
+          id="adminLoginBtn"
+          class="button button-primary button-block"
+          type="submit"
+        >
+          Iniciar sesión
+        </button>
+
+      </form>
+
+
+      <div
+        style="
+          margin-top:16px;
+          text-align:center;
+        "
+      >
+
+        <a
+          href="/"
+          class="text-button"
+          style="text-decoration:none;"
+        >
+          ← Volver a WorkLog
+        </a>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- ===================================================
+       SIN PERMISO
+       =================================================== -->
+
+  <section
+    id="adminDeniedScreen"
+    class="admin-denied admin-hidden"
+  >
+
+    <div class="admin-denied-card">
+
+      <div class="admin-denied-icon">
+        !
+      </div>
+
+      <h1>
+        Acceso no autorizado
+      </h1>
+
+      <p>
+        La cuenta inició sesión correctamente, pero no está
+        registrada como administradora de WorkLog.
+      </p>
+
+      <div class="admin-denied-actions">
+
+        <a
+          href="/"
+          class="button button-ghost"
+          style="text-decoration:none;"
+        >
+          Volver a WorkLog
+        </a>
+
+        <button
+          id="adminDeniedLogoutBtn"
+          class="button button-danger"
+          type="button"
+        >
+          Cerrar sesión
+        </button>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- ===================================================
+       PANEL
+       =================================================== -->
+
+  <section
+    id="adminApp"
+    class="admin-shell admin-hidden"
+  >
+
+    <main class="admin-main">
+
+
+      <!-- =================================================
+           CABECERA
+           ================================================= -->
+
+      <header class="admin-topbar">
+
+        <div class="admin-title">
+
+          <div class="admin-title-row">
+
+            <h1>
+              WorkLog
+            </h1>
+
+            <span class="admin-badge">
+              ADMIN
+            </span>
+
+          </div>
+
+          <p>
+            Gestión de acceso y cuentas
+          </p>
+
+        </div>
+
+
+        <div class="admin-top-actions">
+
+          <div
+            id="adminCurrentEmail"
+            class="admin-user-chip"
+          >
+            —
+          </div>
+
+
+          <a
+            href="/"
+            class="button button-ghost button-small"
+            style="text-decoration:none;"
+          >
+            <span>WorkLog</span>
+            ↗
+          </a>
+
+
+          <button
+            id="adminLogoutBtn"
+            class="button button-danger button-small"
+            type="button"
+          >
+            Salir
+          </button>
+
+        </div>
+
+      </header>
+
+
+      <!-- =================================================
+           ESTADÍSTICAS
+           ================================================= -->
+
+      <section class="admin-stats">
+
+        <article class="admin-stat">
+
+          <span>
+            Cuentas
+          </span>
+
+          <strong id="adminStatTotal">
+            0
+          </strong>
+
+        </article>
+
+
+        <article class="admin-stat">
+
+          <span>
+            Activas
+          </span>
+
+          <strong id="adminStatActive">
+            0
+          </strong>
+
+        </article>
+
+
+        <article class="admin-stat">
+
+          <span>
+            Suspendidas
+          </span>
+
+          <strong id="adminStatSuspended">
+            0
+          </strong>
+
+        </article>
+
+
+        <article class="admin-stat">
+
+          <span>
+            Bloqueadas
+          </span>
+
+          <strong id="adminStatBlocked">
+            0
+          </strong>
+
+        </article>
+
+      </section>
+
+
+      <!-- =================================================
+           BUSCADOR
+           ================================================= -->
+
+      <section class="admin-toolbar-card">
+
+        <div class="admin-toolbar">
+
+          <input
+            id="adminSearch"
+            class="control"
+            type="search"
+            placeholder="Buscar por correo, nombre o UID..."
+            autocomplete="off"
+          >
+
+
+          <select
+            id="adminStatusFilter"
+            class="control"
+          >
+            <option value="">
+              Todos los estados
+            </option>
+
+            <option value="active">
+              Activas
+            </option>
+
+            <option value="suspended">
+              Suspendidas
+            </option>
+
+            <option value="blocked">
+              Bloqueadas
+            </option>
+          </select>
+
+
+          <button
+            id="adminRefreshBtn"
+            class="button button-ghost"
+            type="button"
+          >
+            ↻ Actualizar
+          </button>
+
+
+          <button
+            id="adminCreateUserBtn"
+            class="button button-primary"
+            type="button"
+          >
+            ＋ Crear cuenta
+          </button>
+
+        </div>
+
+      </section>
+
+
+      <!-- =================================================
+           CUENTAS
+           ================================================= -->
+
+      <section class="admin-content-card">
+
+        <div class="admin-content-head">
+
+          <div>
+
+            <h2>
+              Cuentas registradas
+            </h2>
+
+            <p id="adminAccountCountText">
+              Cargando cuentas...
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <div
+          id="adminLoadingList"
+          class="admin-loading-list"
+        >
+
+          <div class="admin-loading-row"></div>
+          <div class="admin-loading-row"></div>
+          <div class="admin-loading-row"></div>
+
+        </div>
+
+
+        <div
+          id="adminAccountList"
+          class="admin-list admin-hidden"
+        ></div>
+
+
+        <div
+          id="adminEmpty"
+          class="admin-empty admin-hidden"
+        >
+          No hay cuentas que coincidan con los filtros.
+        </div>
+
+      </section>
+
+    </main>
+
+  </section>
+
+
+  <!-- ===================================================
+       CREAR CUENTA
+       =================================================== -->
+
+  <div
+    id="adminCreateModal"
+    class="admin-modal-backdrop"
+  >
+
+    <div
+      class="admin-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="adminCreateTitle"
+    >
+
+      <div class="admin-modal-head">
+
+        <div>
+
+          <h3 id="adminCreateTitle">
+            Crear cuenta
+          </h3>
+
+          <p>
+            Crea una cuenta nueva de Firebase Authentication
+            y su perfil de acceso de WorkLog.
+          </p>
+
+        </div>
+
+
+        <button
+          class="icon-button"
+          type="button"
+          data-admin-close="adminCreateModal"
+          aria-label="Cerrar"
+        >
+          ✕
+        </button>
+
+      </div>
+
+
+      <form id="adminCreateForm">
+
+        <div class="field">
+
+          <label for="adminCreateName">
+            Nombre
+          </label>
+
+          <input
+            id="adminCreateName"
+            class="control"
+            type="text"
+            maxlength="80"
+            autocomplete="off"
+            placeholder="Nombre del usuario"
+          >
+
+        </div>
+
+
+        <div class="field">
+
+          <label for="adminCreateEmail">
+            Correo electrónico
+          </label>
+
+          <input
+            id="adminCreateEmail"
+            class="control"
+            type="email"
+            required
+            autocomplete="off"
+            placeholder="correo@ejemplo.com"
+          >
+
+        </div>
+
+
+        <div class="field">
+
+          <label for="adminCreatePassword">
+            Contraseña inicial
+          </label>
+
+          <input
+            id="adminCreatePassword"
+            class="control"
+            type="password"
+            minlength="6"
+            required
+            autocomplete="new-password"
+            placeholder="Mínimo 6 caracteres"
+          >
+
+        </div>
+
+
+        <div class="field">
+
+          <label for="adminCreatePasswordConfirm">
+            Confirmar contraseña
+          </label>
+
+          <input
+            id="adminCreatePasswordConfirm"
+            class="control"
+            type="password"
+            minlength="6"
+            required
+            autocomplete="new-password"
+            placeholder="Repite la contraseña"
+          >
+
+        </div>
+
+
+        <div class="admin-info-box">
+
+          <strong>
+            Importante:
+          </strong>
+
+          Esta función podrá crear cuentas mediante una
+          instancia secundaria del SDK web de Firebase, sin
+          cerrar tu sesión administrativa.
+
+        </div>
+
+
+        <div class="admin-form-actions">
+
+          <button
+            class="button button-ghost"
+            type="button"
+            data-admin-close="adminCreateModal"
+          >
+            Cancelar
+          </button>
+
+
+          <button
+            id="adminCreateSubmitBtn"
+            class="button button-primary"
+            type="submit"
+          >
+            Crear cuenta
+          </button>
+
+        </div>
+
+      </form>
+
+    </div>
+
+  </div>
+
+
+  <!-- ===================================================
+       GESTIONAR CUENTA
+       =================================================== -->
+
+  <div
+    id="adminManageModal"
+    class="admin-modal-backdrop"
+  >
+
+    <div
+      class="admin-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="adminManageTitle"
+    >
+
+      <div class="admin-modal-head">
+
+        <div>
+
+          <h3 id="adminManageTitle">
+            Gestionar cuenta
+          </h3>
+
+          <p>
+            Suspensión y control de acceso a WorkLog.
+          </p>
+
+        </div>
+
+
+        <button
+          class="icon-button"
+          type="button"
+          data-admin-close="adminManageModal"
+          aria-label="Cerrar"
+        >
+          ✕
+        </button>
+
+      </div>
+
+
+      <input
+        id="adminManageUid"
+        type="hidden"
+      >
+
+
+      <div class="admin-account-box">
+
+        <strong id="adminManageName">
+          Usuario
+        </strong>
+
+        <span id="adminManageEmail">
+          —
+        </span>
+
+        <span id="adminManageUidText">
+          —
+        </span>
+
+      </div>
+
+
+      <div
+        id="adminManageStatus"
+        class="admin-status active"
+      >
+        Activa
+      </div>
+
+
+      <div class="admin-action-grid">
+
+        <button
+          id="adminSuspendDayBtn"
+          class="button button-ghost"
+          type="button"
+        >
+          Suspender 1 día
+        </button>
+
+
+        <button
+          id="adminSuspendWeekBtn"
+          class="button button-ghost"
+          type="button"
+        >
+          Suspender 7 días
+        </button>
+
+
+        <button
+          id="adminReactivateBtn"
+          class="button button-primary"
+          type="button"
+        >
+          Reactivar
+        </button>
+
+
+        <button
+          id="adminBlockForeverBtn"
+          class="button button-danger"
+          type="button"
+        >
+          Bloquear indefinidamente
+        </button>
+
+      </div>
+
+
+      <div class="admin-custom-block">
+
+        <div class="field">
+
+          <label for="adminBlockedUntil">
+            Suspender hasta
+          </label>
+
+          <input
+            id="adminBlockedUntil"
+            class="control"
+            type="datetime-local"
+          >
+
+        </div>
+
+
+        <button
+          id="adminApplyCustomBlockBtn"
+          class="button button-ghost button-block"
+          type="button"
+        >
+          Aplicar fecha de suspensión
+        </button>
+
+      </div>
+
+
+      <div class="admin-custom-block">
+
+        <div class="field">
+
+          <label for="adminNote">
+            Nota administrativa
+          </label>
+
+          <textarea
+            id="adminNote"
+            class="control textarea"
+            maxlength="500"
+            placeholder="Nota privada del administrador..."
+          ></textarea>
+
+        </div>
+
+
+        <button
+          id="adminSaveNoteBtn"
+          class="button button-ghost button-block"
+          type="button"
+        >
+          Guardar nota
+        </button>
+
+      </div>
+
+
+      <div class="admin-info-box">
+
+        <strong>
+          Eliminación de Firebase Authentication:
+        </strong>
+
+        desde una página web normal no se puede eliminar de
+        forma segura la cuenta de otro usuario ni establecer
+        el campo oficial <code>disabled</code> de Firebase
+        Auth. Eso requiere Firebase Admin SDK ejecutándose en
+        un servidor de confianza. El bloqueo indefinido de
+        este panel sí impedirá que esa cuenta utilice los
+        datos protegidos de WorkLog.
+
+      </div>
+
+
+      <div class="admin-form-actions">
+
+        <button
+          class="button button-primary"
+          type="button"
+          data-admin-close="adminManageModal"
+        >
+          Listo
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- ===================================================
+       CONFIRMACIÓN
+       =================================================== -->
+
+  <div
+    id="adminConfirmModal"
+    class="admin-modal-backdrop"
+  >
+
+    <div
+      class="admin-modal"
+      style="width:min(420px,100%);"
+      role="dialog"
+      aria-modal="true"
+    >
+
+      <div class="admin-modal-head">
+
+        <div>
+
+          <h3 id="adminConfirmTitle">
+            Confirmar
+          </h3>
+
+        </div>
+
+      </div>
+
+
+      <p
+        id="adminConfirmText"
+        style="
+          margin:0;
+          color:var(--muted);
+          font-size:11px;
+          line-height:1.6;
+        "
+      ></p>
+
+
+      <div class="admin-form-actions">
+
+        <button
+          id="adminConfirmCancel"
+          class="button button-ghost"
+          type="button"
+        >
+          Cancelar
+        </button>
+
+
+        <button
+          id="adminConfirmOk"
+          class="button button-danger"
+          type="button"
+        >
+          Confirmar
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- ===================================================
+       TOASTS
+       =================================================== -->
+
+  <div
+    id="adminToastContainer"
+    class="admin-toast-container"
+    aria-live="polite"
+  ></div>
+
+
+  <!-- ===================================================
+       JAVASCRIPT
+       =================================================== -->
+
+  <script
+    type="module"
+    src="/js/admin.js"
+  ></script>
+
+</body>
+
+</html>
